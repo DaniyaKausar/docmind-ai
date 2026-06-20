@@ -185,12 +185,31 @@ with tab1:
         question = st.chat_input("Ask anything about your document...") or prefill
 
         if question:
+            import time
             st.markdown(f"<div class='user-bubble'>🙋 {question}</div>", unsafe_allow_html=True)
             with st.spinner("Searching document..."):
+                start_time = time.time()
                 answer, sources, confidence, confidence_reason = get_answer(
-                    st.session_state.chain_and_retriever, question, st.session_state.chat_history)
+                    st.session_state.chain_and_retriever,
+                    question,
+                    st.session_state.chat_history
+                )
+                response_time = round(time.time() - start_time, 2)
             conf_class = f"conf-{confidence.lower()}"
             source_tags = " ".join(f"<span class='source-tag'>{s}</span>" for s in sources)
+            conf_title=f"{'✓'if confidence == 'High' else '∽' if confidence == 'Medium' else '?'} {confidence}"
+            st.markdown(f"""
+            <div class='ai-bubble'>
+                {answer}
+                <div class='meta-row'>
+                    <span class='{conf_class}' title='{confidence_reason}'>{conf_title}</span>
+                    {source_tags}
+                    <span style='display:inline-block;background:#13141f;color:#4b5263;
+                                border:1px solid #1e2130;border-radius:4px;padding:2px 8px;
+                                font-size:0.72rem;font-family:monospace'>⚡ {response_time}s</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             conf_title = f"{'✓' if confidence == 'High' else '~' if confidence == 'Medium' else '?'} {confidence}"
             st.markdown(f"""<div class='ai-bubble'>{answer}
                 <div class='meta-row'><span class='{conf_class}' title='{confidence_reason}'>{conf_title}</span>{source_tags}</div>
@@ -201,7 +220,7 @@ with tab1:
                 "sources": sources, "confidence": confidence, "confidence_reason": confidence_reason
             })
             save_session(st.session_state.session_id, st.session_state.pdf_name, st.session_state.chat_history)
-            save_analytics("question_asked", {"confidence": confidence, "pdf": st.session_state.pdf_name})
+            save_analytics("question_asked", {"confidence": confidence, "pdf": st.session_state.pdf_name, "response_time": response_time})
 
 with tab2:
     from career.extractor import extract_resume_data, extract_jd_data
